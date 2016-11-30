@@ -23,33 +23,31 @@
    )
   )
 
-(def all-conds (atom {}))
-(def all-joins (atom {}))
-(def all-results (atom {}))
-
 (defn add-cond
   [new-cond-as-atom]
-  (reset! all-conds (assoc @all-conds (keyword (:id @new-cond-as-atom)) new-cond-as-atom))
+  ;; (reset! all-conds
+  ;;         (assoc @all-conds (keyword (:id @new-cond-as-atom)) new-cond-as-atom)
+  ;;         )
   )
 
 (defn get-cond-node
-  [cond-id]
-  ((sym-to-key cond-id) @all-conds)
+  [rule-graph cond-id]
+  ((sym-to-key cond-id) (:all-conds rule-graph))
   )
 
 (defn add-join
   [new-join-as-atom]
-  (reset! all-joins (assoc @all-joins (keyword (:id @new-join-as-atom)) new-join-as-atom))
+  ;; (reset! all-joins (assoc @all-joins (keyword (:id @new-join-as-atom)) new-join-as-atom))
   )
 
 (defn add-result
   [new-result]
-  (reset! all-results (assoc @all-results (keyword (:id @new-result)) new-result))
+  ;; (reset! all-results (assoc @all-results (keyword (:id @new-result)) new-result))
   )
 
 (defn find-id-for-clause
-  [clause]
-  (let [id-and-clause (first (for [cond-node (map deref (vals @all-conds))
+  [cur-rule-graph clause]
+  (let [id-and-clause (first (for [cond-node (map deref (vals (:all-conds cur-rule-graph)))
                         :when (= clause (:cond-clause cond-node))]
                     (list (:id cond-node) clause)))]
     id-and-clause)

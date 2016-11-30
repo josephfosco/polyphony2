@@ -24,11 +24,6 @@
 
 (def reset-num (atom 0))
 
-(defn new-rule-graph
-  []
-  (create-rule-graph)
-  )
-
 (defmacro defrule
   [cond-clauses rslt-clauses]
   (add-rule-to-graph cond-clauses rslt-clauses)

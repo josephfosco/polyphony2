@@ -15,7 +15,7 @@
 
 (ns polyphony.utils)
 
-(def ^:private log-to-console? (atom false))
+(def ^:private log-to-console? (atom true))
 
 (defn log-to-console
   [& msgs]
@@ -41,11 +41,11 @@
   (keyword (name sym))
   )
 
-(defn check-atom
+(defn subst-if-var
   [elem]
-  (log-to-console "check-atom: " elem)
+  (log-to-console "subst-if-var: " elem)
   (if (is-variable? elem)
-    `(deref ~(symbol (str "polyphony.variables/" (name elem))))
+    (str "(polyphony.rule-graph/get-var-value " (name elem) ")")
     elem
     ))
 
@@ -56,7 +56,7 @@
   (doall (for [elem clause]
            (cond (= (type elem) java.lang.String) (str "\"" elem "\"")
                  (seq? elem) (clause-to-fn elem)
-                 :else (check-atom elem))
+                 :else (subst-if-var elem))
            ))
   )
 
@@ -69,8 +69,9 @@
                      (list 'fn [] clause-with-atoms)
                      )
         ]
-    (log-to-console "clause-to-fn with-atoms: " clause-with-atoms (= (first clause)
-                                                                     'set-var))
+    (log-to-console "clause-to-fn with-atoms: "
+                    clause-with-atoms
+                    (= (first clause) 'set-var))
     (log-to-console "clause-to-fn new-clause: " new-clause)
     new-clause
     )

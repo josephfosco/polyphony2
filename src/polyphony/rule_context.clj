@@ -1,4 +1,4 @@
-;    Copyright (C) 2015-2016  Joseph Fosco. All Rights Reserved
+;    Copyright (C) 2016  Joseph Fosco. All Rights Reserved
 ;
 ;    This program is free software: you can redistribute it and/or modify
 ;    it under the terms of the GNU General Public License as published by
@@ -25,32 +25,8 @@
   )
 
 (defn rule-context
-  []
-  (let all-conds (atom {})
-       all-joins (atom {})
-       all-results (atom {})
-       ;; all-variables is a map where keys = variable names as keywords and
-       ;;   vals = a list of cond node ids that use the variable
-       all-variables (atom {})
-
-       new-variable (fn [cur-variables variable-name node-atom]
-                     (assoc cur-variables
-                            (keyword (name variable-name))
-                            (conj ((keyword (name variable-name)) cur-variables)
-                                  node-atom)))
-
-
-       add-variable (fn [variable-name node-atom]
-                      (if node-atom
-                        (swap! all-variables
-                               new-variable
-                               variable-name
-                               node-atom))
-                      (intern (ns-name 'polyphony.variables)
-                              variable-name
-                              (atom nil))
-                      variable-name
-                      )
+  [rules]
+  (let rule-info (atom rules)
 
        set-variable (fn [var-name val reset-num]
                       (dorun (for [output-atom ((sym-to-key var-name)
@@ -106,8 +82,6 @@
 
        (fn [m]
          (cond
-           (= m :new-variable) new-variable
-           (= m :add-variable) add-variable
            (= m :set-variable) set-variable
            (= m :get-variable) get-variable
            (= m :add-cond) add-cond

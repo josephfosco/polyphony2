@@ -22,18 +22,24 @@
    [polyphony.node-tree :refer [add-cond find-id-for-clause add-join
                                 get-cond-node add-result]]
    [polyphony.node.resultnode :refer [create-result-node]]
+   [polyphony.rule-graph :refer [add-variable create-rule-graph]]
    [polyphony.utils :refer [is-variable? log-to-console]]
-   [polyphony.variables :refer [add-variable]]
    )
   )
 
-(defn create-cond-variables
-  [cond-node-as-atom]
+(def rule-info (atom (create-rule-graph)))
 
-  (list cond-node-as-atom
-        (for [tstvar (:cond-clause @cond-node-as-atom)
+(defn reset-rule-info
+  []
+  (reset! rule-info (create-rule-graph)))
+
+(defn create-cond-variables
+  [cond-node]
+
+  (list cond-node
+        (for [tstvar (:cond-clause cond-node)
               :when (is-variable? tstvar)]
-     (add-variable tstvar cond-node-as-atom)
+          (add-variable tstvar (:id cond-node))
      )
    )
   )
@@ -42,12 +48,15 @@
 (defn add-vars
   [elem clause-vec ndx]
   (log-to-console "add-vars: " elem)
+  ;; do not add elem to variables if elem is in a clause that
+  ;; begins with "set-var". The following cond assumes that a variable
+  ;; will never be the first element in a clause
   (cond (and  (is-variable? elem) (not (.endsWith (name (get clause-vec
                                                              (dec ndx)))
                                                   "set-var")))
         (do
           (log-to-console "adding var: " elem)
-          (add-variable elem nil)
+          (add-variable rule-info elem nil)
           )
         (seq? elem)
         (find-variables elem)
@@ -64,7 +73,7 @@
   )
 
 
-(defn create-variables
+(defn- create-variables
   [clauses]
   (log-to-console "create-variables " clauses)
   (dorun (for [clause clauses]
@@ -83,13 +92,14 @@
 
 (defn get-existing-conds
   [cond-clauses]
-  (doall (remove nil? (map find-id-for-clause cond-clauses)))
+  (doall (remove nil? (map find-id-for-clause (repeat @rule-info) cond-clauses)))
   )
 
 (defn new-clause
+  " Returns a list of the clauses in \"clauses\" that are NOT in rule-info"
   [clauses]
   (doall (remove nil?
-                 (map #(when (not (find-id-for-clause %))
+                 (map #(when (not (find-id-for-clause rule-info %))
                          (list (gensym 'C_) %)
                          )
                       clauses)))
@@ -164,11 +174,13 @@
   [cond-clauses rslt-clauses]
   (let [existing-conds (get-existing-conds cond-clauses)
         new-conds (new-clause cond-clauses)
-        existing-cond-nodes (map get-cond-node (map first existing-conds))
+        existing-cond-nodes (map get-cond-node
+                                 (repeat rule-info)
+                                 (map first existing-conds))
         ]
 
     (create-variables (doall (map list (map second new-conds))))
-    (let [new-cond-nodes (map atom (map create-cond-node new-conds))]
+    (let [new-cond-nodes (map create-cond-node new-conds)]
 
       (log-to-console)
       (log-to-console "existing-conds: " existing-conds)
@@ -177,16 +189,18 @@
       (log-to-console "new-cond-nodes: " new-cond-nodes)
       (log-to-console)
 
-      (dorun (map add-cond new-cond-nodes))
-      (dorun (map add-num-variables-to-cond
-                  (map create-cond-variables new-cond-nodes))
+      (comment
+        (dorun (map add-cond new-cond-nodes))
+        (dorun (map add-num-variables-to-cond
+                    (map create-cond-variables new-cond-nodes))
+               )
+        (create-variables rslt-clauses)
+        (->> new-cond-nodes
+             (into existing-cond-nodes)
+             (graph-cond-clauses)
+             (graph-result-clauses rslt-clauses)
              )
-      (create-variables rslt-clauses)
-      (->> new-cond-nodes
-           (into existing-cond-nodes)
-           (graph-cond-clauses)
-           (graph-result-clauses rslt-clauses)
-           )
+        )
       )
     )
   )
